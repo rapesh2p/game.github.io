@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#050914">
+<title>STARFALL: Deep Space</title>
+<style>
+:root {
+  --bg:#050914;
+  --panel:rgba(9,18,37,.92);
+  --line:rgba(122,183,255,.22);
+  --cyan:#65e7ff;
+  --blue:#5795ff;
+  --violet:#a77aff;
+  --gold:#ffd36c;
+  --red:#ff637f;
+  --green:#72ffc0;
+  --text:#eaf4ff;
+  --muted:#91a7c4;
+}
+* { box-sizing:border-box; }
+html,body {
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,system-ui,Arial,sans-serif;
+  touch-action:none;
+}
+button { font:inherit; }
+#game {
+  position:fixed;
+  inset:0;
+  overflow:hidden;
+  background:
+    radial-gradient(ellipse at 50% 20%,#10234b 0%,transparent 48%),
+    linear-gradient(#050914,#080d1b);
+}
+canvas {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+}
+.screen {
+  position:absolute;
+  inset:0;
+  display:none;
+  z-index:5;
+  overflow-y:auto;
+  padding:24px;
+  background:linear-gradient(180deg,rgba(3,7,18,.72),rgba(3,7,18,.94));
+}
+.screen.active { display:flex; }
+.center {
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  text-align:center;
+}
+.logo {
+  font-size:clamp(35px,8vw,76px);
+  font-weight:1000;
+  letter-spacing:.12em;
+  line-height:1;
+  color:white;
+  text-shadow:0 0 22px #4acfff,0 0 55px #2866ff;
+}
+.subtitle {
+  color:var(--cyan);
+  letter-spacing:.35em;
+  font-size:12px;
+  margin:14px 0 30px;
+}
+.panel {
+  width:min(620px,100%);
+  padding:24px;
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:var(--panel);
+  box-shadow:0 20px 70px #0009,inset 0 0 30px #1c4d8020;
+  backdrop-filter:blur(15px);
+}
+h1,h2,h3,p { margin-top:0; }
+h2 { letter-spacing:.08em; }
+.muted { color:var(--muted); }
+button {
+  border:1px solid #5acfff66;
+  color:var(--text);
+  background:linear-gradient(135deg,#173b65,#14213d);
+  border-radius:12px;
+  padding:13px 20px;
+  font-weight:800;
+  cursor:pointer;
+  transition:.15s;
+}
+button:active { transform:scale(.96); }
+button.primary {
+  background:linear-gradient(135deg,#087ca5,#3157c9);
+  border-color:#70eaff;
+  box-shadow:0 0 22px #23baff44;
+}
+button.gold {
+  background:linear-gradient(135deg,#79521a,#b17b2c);
+  border-color:#ffda83;
+}
+button.danger {
+  background:linear-gradient(135deg,#651c39,#a82b4d);
+  border-color:#ff7796;
+}
+button:disabled {
+  opacity:.4;
+  cursor:not-allowed;
+}
+.menu-buttons {
+  display:grid;
+  width:min(360px,100%);
+  gap:12px;
+}
+.menu-buttons button {
+  min-height:52px;
+  letter-spacing:.1em;
+}
+.stats {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:18px 0;
+}
+.stat {
+  padding:13px 8px;
+  background:#101e35;
+  border:1px solid var(--line);
+  border-radius:13px;
+}
+.stat strong {
+  display:block;
+  color:var(--cyan);
+  font-size:21px;
+}
+.stat small {
+  color:var(--muted);
+  font-size:10px;
+  letter-spacing:.12em;
+}
+#hud {
+  display:none;
+  position:absolute;
+  z-index:3;
+  inset:0;
+  pointer-events:none;
+  padding:14px;
+}
+#hud.active { display:block; }
+.topbar {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.hudbox {
+  background:#071327d9;
+  border:1px solid #6ecfff55;
+  border-radius:12px;
+  padding:9px 12px;
+  backdrop-filter:blur(8px);
+  font-size:12px;
+}
+.hudbox strong {
+  color:var(--cyan);
+  font-size:15px;
+}
+#healthOuter,#bossHealthOuter {
+  width:clamp(110px,25vw,230px);
+  height:9px;
+  background:#293448;
+  border-radius:20px;
+  overflow:hidden;
+  margin-top:5px;
+}
+#healthFill {
+  height:100%;
+  width:100%;
+  background:linear-gradient(90deg,#35e5a0,#b5ff83);
+  transition:width .15s;
+}
+#bossBar {
+  display:none;
+  position:absolute;
+  top:85px;
+  left:50%;
+  transform:translateX(-50%);
+  text-align:center;
+  width:min(480px,75%);
+}
+#bossHealthOuter {
+  width:100%;
+  height:12px;
+  border:1px solid #ff7b9d;
+}
+#bossHealthFill {
+  height:100%;
+  width:100%;
+  background:linear-gradient(90deg,#ff315e,#ffb45b);
+}
+.hud-actions {
+  pointer-events:auto;
+  display:flex;
+  gap:8px;
+}
+.hud-actions button {
+  padding:9px 12px;
+  font-size:11px;
+}
+#controls {
+  display:none;
+  position:absolute;
+  z-index:4;
+  inset:0;
+  pointer-events:none;
+}
+#controls.active { display:block; }
+.control {
+  position:absolute;
+  pointer-events:auto;
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#0a2445aa;
+  border:1px solid #76dcff99;
+  box-shadow:0 0 20px #18aaff33;
+  user-select:none;
+  -webkit-user-select:none;
+}
+#specialBtn {
+  right:22px;
+  bottom:28px;
+  width:82px;
+  height:82px;
+  border-color:#c58bff;
+  background:radial-gradient(circle,#6235a9,#171638);
+  box-shadow:0 0 24px #9d55ff66;
+  font-size:12px;
+  font-weight:1000;
+}
+#specialBtn.ready {
+  animation:pulse 1s infinite alternate;
+}
+@keyframes pulse {
+  to { box-shadow:0 0 32px #bd72ff; }
+}
+#pauseOverlay {
+  display:none;
+  position:absolute;
+  inset:0;
+  z-index:8;
+  background:#020612c9;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+#pauseOverlay.active { display:flex; }
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(135px,1fr));
+  gap:12px;
+  width:min(760px,100%);
+}
+.shipCard {
+  padding:14px;
+  border:1px solid var(--line);
+  background:#0d1a30;
+  border-radius:14px;
+  text-align:center;
+}
+.shipArt {
+  height:76px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:38px;
+  color:var(--cyan);
+  text-shadow:0 0 18px currentColor;
+}
+.shipCard p {
+  font-size:11px;
+  color:var(--muted);
+  min-height:30px;
+}
+#toast {
+  position:absolute;
+  z-index:20;
+  top:18%;
+  left:50%;
+  transform:translate(-50%,-10px);
+  opacity:0;
+  pointer-events:none;
+  background:#091a31ed;
+  border:1px solid var(--cyan);
+  color:white;
+  border-radius:12px;
+  padding:12px 18px;
+  transition:.25s;
+  text-align:center;
+}
+#toast.show {
+  opacity:1;
+  transform:translate(-50%,0);
+}
+@media(max-width:600px) {
+  .screen { padding:14px; }
+  .panel { padding:18px; }
+  .stats { gap:6px; }
+  .stat strong { font-size:17px; }
+}
+</style>
+</head>
+<body>
+<div id="game">
+<canvas id="canvas"></canvas>
+
+<div id="home" class="screen active center">
+  <div class="logo">STARFALL</div>
+  <div class="subtitle">DEEP SPACE</div>
+  <div class="panel">
+    <h2>COMMAND CENTER</h2>
+    <p class="muted">The galaxy is under attack. Take control of your ship and defend the sectors.</p>
+    <div class="stats">
+      <div class="stat"><strong id="homeLevel">1</strong><small>SECTOR</small></div>
+      <div class="stat"><strong id="homeCredits">0</strong><small>CREDITS</small></div>
+      <div class="stat"><strong id="homeKills">0</strong><small>ELIMINATIONS</small></div>
+    </div>
+    <div class="menu-buttons">
+      <button class="primary" id="playBtn">▶ START MISSION</button>
+      <button id="hangarBtn">✦ SHIP HANGAR</button>
+      <button id="upgradeBtn">⬆ UPGRADES</button>
+      <button id="sectorBtn">☄ SECTOR SELECT</button>
+      <button id="soundBtn">♫ SOUND: ON</button>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:20px;font-size:11px">MOVE: DRAG / WASD · AUTO FIRE ENABLED</p>
+</div>
+
+<div id="hangar" class="screen center">
+  <div class="panel">
+    <h2>SHIP HANGAR</h2>
+    <p class="muted">Choose your combat spacecraft.</p>
+    <div id="shipGrid" class="grid"></div>
+    <p id="shipInfo" class="muted"></p>
+    <button id="hangarBack">BACK</button>
+  </div>
+</div>
+
+<div id="upgrades" class="screen center">
+  <div class="panel">
+    <h2>SHIP UPGRADES</h2>
+    <p class="muted">Permanently improve your spacecraft.</p>
+    <div id="upgradeList"></div>
+    <button id="upgradeBack">BACK</button>
+  </div>
+</div>
+
+<div id="sectors" class="screen center">
+  <div class="panel">
+    <h2>SECTOR SELECT</h2>
+    <p class="muted">Choose an unlocked mission.</p>
+    <div id="sectorGrid" class="grid"></div>
+    <button id="sectorBack">BACK</button>
+  </div>
+</div>
+
+<div id="hud">
+  <div class="topbar">
+    <div class="hudbox">
+      <strong id="sectorLabel">SECTOR 1</strong>
+      <div id="healthOuter"><div id="healthFill"></div></div>
+      <small id="healthText">100 / 100 HP</small>
+    </div>
+    <div class="hudbox">
+      <strong id="creditLabel">0 CR</strong><br>
+      <small id="killLabel">0 ELIMINATIONS</small>
+    </div>
+    <div class="hud-actions">
+      <button id="pauseBtn">Ⅱ</button>
+    </div>
+  </div>
+  <div id="bossBar">
+    <strong id="bossName">BOSS</strong>
+    <div id="bossHealthOuter"><div id="bossHealthFill"></div></div>
+  </div>
+</div>
+
+<div id="controls">
+  <div id="specialBtn" class="control">✦<br>NOVA</div>
+</div>
+
+<div id="pauseOverlay">
+  <div class="panel" style="text-align:center;max-width:380px">
+    <h2>MISSION PAUSED</h2>
+    <p class="muted">Your ship is waiting for your command.</p>
+    <div class="menu-buttons">
+      <button class="primary" id="resumeBtn">RESUME</button>
+      <button id="restartBtn">RESTART SECTOR</button>
+      <button class="danger" id="quitBtn">RETURN TO BASE</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+</div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   STARFALL: DEEP SPACE
+   Canvas-based mobile space shooter
+========================================================= */
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const $ = id => document.getElementById(id);
+
+let W = innerWidth;
+let H = innerHeight;
+let DPR = Math.min(devicePixelRatio || 1,2);
+
+function resizeCanvas() {
+  W = innerWidth;
+  H = innerHeight;
+  DPR = Math.min(devicePixelRatio || 1,2);
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+resizeCanvas();
+
+const SHIPS = [
+  {
+    id:"vanguard",
+    name:"VANGUARD",
+    price:0,
+    hp:110,
+    speed:5.2,
+    damage:1,
+    fireRate:190,
+    special:1,
+    color:"#65e7ff",
+    description:"Balanced fighter with reliable weapons."
+  },
+  {
+    id:"phantom",
+    name:"PHANTOM",
+    price:450,
+    hp:85,
+    speed:7,
+    damage:1,
+    fireRate:145,
+    special:1,
+    color:"#bd8aff",
+    description:"Fast interceptor with rapid firing."
+  },
+  {
+    id:"titan",
+    name:"TITAN",
+    price:700,
+    hp:180,
+    speed:3.8,
+    damage:2,
+    fireRate:270,
+    special:1,
+    color:"#ffbd65",
+    description:"Heavy armor and powerful shots."
+  },
+  {
+    id:"spectre",
+    name:"SPECTRE",
+    price:1000,
+    hp:105,
+    speed:5.7,
+    damage:2,
+    fireRate:190,
+    special:2,
+    color:"#83ffa8",
+    description:"Twin energy cannons and strong burst."
+  },
+  {
+    id:"nova",
+    name:"NOVA",
+    price:1500,
+    hp:120,
+    speed:6,
+    damage:3,
+    fireRate:220,
+    special:2,
+    color:"#ff80b7",
+    description:"Advanced plasma weapon technology."
+  },
+  {
+    id:"eclipse",
+    name:"ECLIPSE",
+    price:2500,
+    hp:150,
+    speed:6.5,
+    damage:4,
+    fireRate:175,
+    special:3,
+    color:"#d2a4ff",
+    description:"Elite spacecraft built for boss battles."
+  }
+];
+
+const ENEMY_TYPES = [
+  {
+    name:"SCOUT",
+    hp:2,
+    speed:2.2,
+    damage:9,
+    reward:12,
+    color:"#ff6689",
+    radius:15,
+    attack:"single"
+  },
+  {
+    name:"SKIRMISHER",
+    hp:3,
+    speed:3,
+    damage:10,
+    reward:16,
+    color:"#ffb35c",
+    radius:17,
+    attack:"weave"
+  },
+  {
+    name:"TANK",
+    hp:9,
+    speed:1.25,
+    damage:18,
+    reward:25,
+    color:"#a77aff",
+    radius:23,
+    attack:"heavy"
+  },
+  {
+    name:"SNIPER",
+    hp:4,
+    speed:1.7,
+    damage:15,
+    reward:20,
+    color:"#ff5268",
+    radius:16,
+    attack:"aimed"
+  },
+  {
+    name:"SPLITTER",
+    hp:5,
+    speed:2,
+    damage:12,
+    reward:23,
+    color:"#62e6ff",
+    radius:18,
+    attack:"spread"
+  },
+  {
+    name:"WRAITH",
+    hp:4,
+    speed:4,
+    damage:13,
+    reward:26,
+    color:"#a3ffcb",
+    radius:14,
+    attack:"dash"
+  }
+];
+
+const BOSS_NAMES = [
+  "VOID DESTROYER",
+  "THE IRON COLOSSUS",
+  "NEBULA REAPER",
+  "CRIMSON DEVOURER",
+  "PHANTOM OVERLORD",
+  "SOLAR TITAN",
+  "DREADNIGHT",
+  "THE STAR EATER",
+  "OBLIVION PRIME",
+  "GALACTIC EMPEROR"
+];
+
+const BOSS_MOVES = [
+  "fan","aimed","spiral","cross","burst",
+  "sweep","rain","double","ring","chaos"
+];
+
+const UPGRADE_DEFS = [
+  {
+    id:"damage",
+    name:"WEAPON POWER",
+    description:"Increase weapon damage.",
+    base:180,
+    max:10
+  },
+  {
+    id:"health",
+    name:"HULL ARMOR",
+    description:"Increase maximum health.",
+    base:160,
+    max:10
+  },
+  {
+    id:"speed",
+    name:"ENGINE BOOST",
+    description:"Increase movement speed.",
+    base:140,
+    max:8
+  },
+  {
+    id:"fire",
+    name:"FIRE CONTROL",
+    description:"Increase firing speed.",
+    base:220,
+    max:8
+  }
+];
+
+const SAVE_KEY = "starfall_deep_space_save_v1";
+
+function defaultSave() {
+  return {
+    credits:10000000,
+    kills:0,
+    highestSector:1,
+    selectedShip:"vanguard",
+    owned:["vanguard"],
+    upgrades:{
+      damage:0,
+      health:0,
+      speed:0,
+      fire:0
+    },
+    sound:true
+  };
+}
+
+let save = loadSave();
+
+function loadSave() {
+  try {
+    const data = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (!data) return defaultSave();
+    return {
+      ...defaultSave(),
+      ...data,
+      upgrades:{
+        ...defaultSave().upgrades,
+        ...(data.upgrades || {})
+      }
+    };
+  } catch {
+    return defaultSave();
+  }
+}
+
+function saveGame() {
+  try {
+    localStorage.setItem(SAVE_KEY,JSON.stringify(save));
+  } catch {}
+}
+
+let audioContext = null;
+
+function playSound(type) {
+  if (!save.sound) return;
+  try {
+    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === "suspended") audioContext.resume();
+
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+
+    const sounds = {
+      shoot:[520,.045,"square"],
+      hit:[130,.09,"sawtooth"],
+      explosion:[75,.2,"triangle"],
+      special:[180,.45,"sawtooth"],
+      boss:[65,.7,"sawtooth"],
+      buy:[740,.12,"sine"]
+    };
+
+    const s = sounds[type] || sounds.hit;
+    osc.type = s[2];
+    osc.frequency.setValueAtTime(s[0],audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(
+      Math.max(30,s[0]*.45),
+      audioContext.currentTime+s[1]
+    );
+    gain.gain.setValueAtTime(.08,audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      audioContext.currentTime+s[1]
+    );
+    osc.start();
+    osc.stop(audioContext.currentTime+s[1]);
+  } catch {}
+}
+
+function toast(message) {
+  const el = $("toast");
+  el.textContent = message;
+  el.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(()=>el.classList.remove("show"),1800);
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  $(id).classList.add("active");
+}
+
+function currentShip() {
+  return SHIPS.find(s=>s.id===save.selectedShip) || SHIPS[0];
+}
+
+function upgradeLevel(id) {
+  return save.upgrades[id] || 0;
+}
+
+function upgradeCost(def) {
+  return Math.floor(def.base * Math.pow(1.55,upgradeLevel(def.id)));
+}
+
+function refreshHome() {
+  $("homeLevel").textContent = save.highestSector;
+  $("homeCredits").textContent = save.credits;
+  $("homeKills").textContent = save.kills;
+  $("soundBtn").textContent = "♫ SOUND: " + (save.sound?"ON":"OFF");
+}
+
+function openHangar() {
+  const grid = $("shipGrid");
+  grid.innerHTML = "";
+
+  SHIPS.forEach(ship=>{
+    const owned = save.owned.includes(ship.id);
+    const selected = save.selectedShip === ship.id;
+
+    const card = document.createElement("div");
+    card.className = "shipCard";
+    card.innerHTML = `
+      <div class="shipArt" style="color:${ship.color}">✦</div>
+      <strong>${ship.name}</strong>
+      <p>${ship.description}</p>
+      <small>HP ${ship.hp} · SPEED ${ship.speed}</small>
+      <p>${owned?"UNLOCKED":ship.price+" CREDITS"}</p>
+      <button ${selected?"disabled":""} class="${owned?"":"gold"}">
+        ${selected?"SELECTED":owned?"SELECT":"UNLOCK"}
+      </button>
+    `;
+
+    card.querySelector("button").addEventListener("click",()=>{
+      if (owned) {
+        save.selectedShip = ship.id;
+        saveGame();
+        openHangar();
+        toast(ship.name+" SELECTED");
+      } else if (save.credits >= ship.price) {
+        save.credits -= ship.price;
+        save.owned.push(ship.id);
+        save.selectedShip = ship.id;
+        saveGame();
+        playSound("buy");
+        openHangar();
+        refreshHome();
+        toast(ship.name+" UNLOCKED");
+      } else {
+        toast("NOT ENOUGH CREDITS");
+      }
+    });
+
+    grid.appendChild(card);
+  });
+
+  $("shipInfo").textContent = "AVAILABLE CREDITS: "+save.credits;
+  showScreen("hangar");
+}
+
+function openUpgrades() {
+  const list = $("upgradeList");
+  list.innerHTML = "";
+
+  UPGRADE_DEFS.forEach(def=>{
+    const level = upgradeLevel(def.id);
+    const cost = upgradeCost(def);
+    const row = document.createElement("div");
+    row.className = "shipCard";
+    row.style.marginBottom = "10px";
+
+    row.innerHTML = `
+      <strong>${def.name}</strong>
+      <p>${def.description}</p>
+      <p>LEVEL ${level}/${def.max}</p>
+      <button ${level>=def.max || save.credits<cost?"disabled":""}>
+        ${level>=def.max?"MAX LEVEL":"UPGRADE · "+cost+" CR"}
+      </button>
+    `;
+
+    row.querySelector("button").addEventListener("click",()=>{
+      if (save.credits < cost || level >= def.max) return;
+      save.credits -= cost;
+      save.upgrades[def.id]++;
+      saveGame();
+      playSound("buy");
+      openUpgrades();
+      refreshHome();
+      toast("UPGRADE COMPLETE");
+    });
+
+    list.appendChild(row);
+  });
+
+  showScreen("upgrades");
+}
+
+function openSectors() {
+  const grid = $("sectorGrid");
+  grid.innerHTML = "";
+
+  for (let i=1;i<=100;i++) {
+    const unlocked = i<=save.highestSector;
+    const card = document.createElement("div");
+    card.className = "shipCard";
+    card.innerHTML = `
+      <strong>SECTOR ${i}</strong>
+      <p>${i%10===0?"BOSS SECTOR":"COMBAT ZONE"}</p>
+      <button ${unlocked?"":"disabled"}>${unlocked?"ENTER":"LOCKED"}</button>
+    `;
+    card.querySelector("button").addEventListener("click",()=>{
+      if (unlocked) startGame(i);
+    });
+    grid.appendChild(card);
+  }
+
+  showScreen("sectors");
+}
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let state = {
+  running:false,
+  paused:false,
+  sector:1,
+  time:0,
+  kills:0,
+  credits:0,
+  spawnTimer:0,
+  bossSpawned:false,
+  bossDefeated:false,
+  screenShake:0
+};
+
+let player;
+let bullets = [];
+let enemyBullets = [];
+let enemies = [];
+let particles = [];
+let stars = [];
+let pickups = [];
+let boss = null;
+
+let lastTime = 0;
+let fireTimer = 0;
+let specialCharge = 0;
+let pointerDown = false;
+let pointerX = W/2;
+let pointerY = H*.82;
+let keys = {};
+
+function makeStars() {
+  stars = [];
+  for (let i=0;i<110;i++) {
+    stars.push({
+      x:Math.random()*W,
+      y:Math.random()*H,
+      size:Math.random()*2+.3,
+      speed:Math.random()*1.5+.3,
+      alpha:Math.random()*.7+.2
+    });
+  }
+}
+makeStars();
+
+function startGame(sector=save.highestSector) {
+  state = {
+    running:true,
+    paused:false,
+    sector:Math.max(1,Math.min(100,sector)),
+    time:0,
+    kills:0,
+    credits:0,
+    spawnTimer:0,
+    bossSpawned:false,
+    bossDefeated:false,
+    screenShake:0
+  };
+
+  const ship = currentShip();
+  const upgrades = save.upgrades;
+
+  player = {
+    x:W/2,
+    y:H*.78,
+    radius:16,
+    maxHp:ship.hp + upgrades.health*12,
+    hp:ship.hp + upgrades.health*12,
+    speed:ship.speed + upgrades.speed*.25,
+    damage:ship.damage + upgrades.damage,
+    fireRate:Math.max(75,ship.fireRate-upgrades.fire*12),
+    color:ship.color,
+    invulnerable:0,
+    special:0
+  };
+
+  bullets = [];
+  enemyBullets = [];
+  enemies = [];
+  particles = [];
+  pickups = [];
+  boss = null;
+  fireTimer = 0;
+  specialCharge = 0;
+
+  $("hud").classList.add("active");
+  $("controls").classList.add("active");
+  $("pauseOverlay").classList.remove("active");
+  $("bossBar").style.display = "none";
+
+  showScreen("home");
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+
+  $("sectorLabel").textContent = "SECTOR "+state.sector;
+  updateHUD();
+
+  lastTime = performance.now();
+  requestAnimationFrame(frame);
+  toast("SECTOR "+state.sector+" · ENGAGE");
+}
+
+function updateHUD() {
+  if (!player) return;
+  $("healthFill").style.width = Math.max(0,player.hp/player.maxHp*100)+"%";
+  $("healthText").textContent = Math.ceil(player.hp)+" / "+player.maxHp+" HP";
+  $("creditLabel").textContent = state.credits+" CR";
+  $("killLabel").textContent = state.kills+" ELIMINATIONS";
+  $("specialBtn").classList.toggle("ready",specialCharge>=100);
+}
+
+/* =========================================================
+   DRAWING
+========================================================= */
+
+function drawBackground(dt) {
+  ctx.fillStyle = "#050914";
+  ctx.fillRect(0,0,W,H);
+
+  const glow = ctx.createRadialGradient(W*.5,H*.35,5,W*.5,H*.35,W*.7);
+  glow.addColorStop(0,"#13254a");
+  glow.addColorStop(1,"#050914");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,W,H);
+
+  stars.forEach(s=>{
+    s.y += s.speed*dt*.06;
+    if (s.y>H) {
+      s.y=0;
+      s.x=Math.random()*W;
+    }
+    ctx.globalAlpha=s.alpha;
+    ctx.fillStyle="#b9e9ff";
+    ctx.fillRect(s.x,s.y,s.size,s.size*2.5);
+  });
+  ctx.globalAlpha=1;
+}
+
+function drawShip(x,y,color,scale=1) {
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.scale(scale,scale);
+
+  ctx.shadowColor=color;
+  ctx.shadowBlur=22;
+
+  ctx.fillStyle="#102c4d";
+  ctx.strokeStyle=color;
+  ctx.lineWidth=2;
+
+  ctx.beginPath();
+  ctx.moveTo(0,-24);
+  ctx.lineTo(17,17);
+  ctx.lineTo(7,12);
+  ctx.lineTo(0,19);
+  ctx.lineTo(-7,12);
+  ctx.lineTo(-17,17);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(0,-17);
+  ctx.lineTo(5,7);
+  ctx.lineTo(0,4);
+  ctx.lineTo(-5,7);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle="#ffffff";
+  ctx.globalAlpha=.8;
+  ctx.beginPath();
+  ctx.arc(0,-7,2.5,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.globalAlpha=.9;
+  ctx.fillStyle="#49cfff";
+  ctx.beginPath();
+  ctx.moveTo(-5,17);
+  ctx.lineTo(0,29+Math.random()*5);
+  ctx.lineTo(5,17);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawEnemy(enemy) {
+  ctx.save();
+  ctx.translate(enemy.x,enemy.y);
+  ctx.rotate(enemy.rotation||0);
+  ctx.shadowColor=enemy.type.color;
+  ctx.shadowBlur=15;
+
+  ctx.fillStyle="#171b35";
+  ctx.strokeStyle=enemy.type.color;
+  ctx.lineWidth=2;
+
+  ctx.beginPath();
+  ctx.moveTo(0,enemy.radius);
+  ctx.lineTo(enemy.radius,0);
+  ctx.lineTo(0,-enemy.radius);
+  ctx.lineTo(-enemy.radius,0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle=enemy.type.color;
+  ctx.beginPath();
+  ctx.arc(0,0,4,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+
+  if (enemy.hp < enemy.maxHp) {
+    ctx.fillStyle="#343b50";
+    ctx.fillRect(enemy.x-enemy.radius,enemy.y-enemy.radius-8,enemy.radius*2,3);
+    ctx.fillStyle="#ff6689";
+    ctx.fillRect(enemy.x-enemy.radius,enemy.y-enemy.radius-8,enemy.radius*2*Math.max(0,enemy.hp/enemy.maxHp),3);
+  }
+}
+
+function drawBoss() {
+  if (!boss) return;
+  ctx.save();
+  ctx.translate(boss.x,boss.y);
+  ctx.rotate(Math.sin(state.time*.001)*.08);
+  ctx.shadowColor="#ff426f";
+  ctx.shadowBlur=35;
+
+  const r=boss.radius;
+  ctx.fillStyle="#28122d";
+  ctx.strokeStyle="#ff628d";
+  ctx.lineWidth=4;
+
+  ctx.beginPath();
+  ctx.moveTo(0,r);
+  ctx.lineTo(r*.8,r*.4);
+  ctx.lineTo(r,0);
+  ctx.lineTo(r*.65,-r*.7);
+  ctx.lineTo(0,-r);
+  ctx.lineTo(-r*.65,-r*.7);
+  ctx.lineTo(-r,0);
+  ctx.lineTo(-r*.8,r*.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle="#ff526e";
+  ctx.beginPath();
+  ctx.arc(0,0,r*.25,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle="#ffe6a4";
+  for (let i=-1;i<=1;i+=2) {
+    ctx.beginPath();
+    ctx.arc(i*r*.4,-r*.2,5,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawBullets() {
+  bullets.forEach(b=>{
+    ctx.save();
+    ctx.shadowColor=b.color;
+    ctx.shadowBlur=12;
+    ctx.fillStyle=b.color;
+    ctx.fillRect(b.x-b.width/2,b.y-b.height/2,b.width,b.height);
+    ctx.restore();
+  });
+
+  enemyBullets.forEach(b=>{
+    ctx.save();
+    ctx.shadowColor=b.color;
+    ctx.shadowBlur=12;
+    ctx.fillStyle=b.color;
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,b.radius,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawParticles() {
+  particles.forEach(p=>{
+    ctx.globalAlpha=Math.max(0,p.life/p.maxLife);
+    ctx.fillStyle=p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    ctx.fill();
+  });
+  ctx.globalAlpha=1;
+}
+
+/* =========================================================
+   PARTICLES AND PROJECTILES
+========================================================= */
+
+function explode(x,y,color,count=14) {
+  for (let i=0;i<count;i++) {
+    const angle=Math.random()*Math.PI*2;
+    const speed=Math.random()*4+1;
+    particles.push({
+      x,y,
+      vx:Math.cos(angle)*speed,
+      vy:Math.sin(angle)*speed,
+      size:Math.random()*4+1,
+      life:Math.random()*30+20,
+      maxLife:50,
+      color
+    });
+  }
+}
+
+function playerShoot() {
+  if (!player || fireTimer>0) return;
+  fireTimer=player.fireRate;
+
+  const damage=player.damage;
+  const ship=save.selectedShip;
+
+  if (ship==="spectre" || ship==="eclipse") {
+    [-9,9].forEach(offset=>{
+      bullets.push({
+        x:player.x+offset,
+        y:player.y-20,
+        vx:offset*.025,
+        vy:-10,
+        damage,
+        width:5,
+        height:16,
+        color:player.color
+      });
+    });
+  } else if (ship==="nova") {
+    [-1,0,1].forEach(offset=>{
+      bullets.push({
+        x:player.x+offset*9,
+        y:player.y-20,
+        vx:offset*1.1,
+        vy:-10,
+        damage,
+        width:5,
+        height:17,
+        color:player.color
+      });
+    });
+  } else {
+    bullets.push({
+      x:player.x,
+      y:player.y-22,
+      vx:0,
+      vy:-11,
+      damage,
+      width:5,
+      height:16,
+      color:player.color
+    });
+  }
+
+  playSound("shoot");
+}
+
+function enemyShoot(enemy,mode="single") {
+  if (!player) return;
+
+  const dx=player.x-enemy.x;
+  const dy=player.y-enemy.y;
+  const angle=Math.atan2(dy,dx);
+
+  const shoot=(a,speed=4)=>{
+    enemyBullets.push({
+      x:enemy.x,
+      y:enemy.y,
+      vx:Math.cos(a)*speed,
+      vy:Math.sin(a)*speed,
+      radius:5,
+      damage:enemy.type.damage,
+      color:enemy.type.color
+    });
+  };
+
+  if (mode==="spread") {
+    for (let i=-2;i<=2;i++) shoot(angle+i*.25,3.5);
+  } else if (mode==="aimed") {
+    shoot(angle,5);
+  } else if (mode==="heavy") {
+    shoot(Math.PI/2,3);
+    shoot(Math.PI/2-.25,3);
+    shoot(Math.PI/2+.25,3);
+  } else if (mode==="weave") {
+    shoot(angle-.2,4);
+    shoot(angle+.2,4);
+  } else {
+    shoot(Math.PI/2,3.8);
+  }
+}
+
+/* =========================================================
+   SPAWNING AND ENEMY AI
+========================================================= */
+
+function spawnEnemy() {
+  const index=Math.floor(Math.random()*Math.min(ENEMY_TYPES.length,2+Math.floor(state.sector/8)));
+  const type=ENEMY_TYPES[index];
+  const scale=1+state.sector*.045;
+
+  const enemy={
+    x:Math.random()*(W-60)+30,
+    y:-40,
+    radius:type.radius,
+    type,
+    hp:type.hp*scale,
+    maxHp:type.hp*scale,
+    speed:type.speed+state.sector*.025,
+    timer:Math.random()*1000,
+    rotation:0
+  };
+
+  enemies.push(enemy);
+}
+
+function updateEnemies(dt) {
+  for (let i=enemies.length-1;i>=0;i--) {
+    const e=enemies[i];
+    e.timer+=dt;
+    e.rotation+=.001*dt;
+
+    if (e.type.attack==="weave") {
+      e.x+=Math.sin(e.timer*.004)*2.2*dt*.06;
+    } else if (e.type.attack==="dash") {
+      e.x+=Math.sin(e.timer*.008)*3*dt*.06;
+    }
+
+    e.y+=e.speed*dt*.06;
+
+    const interval=e.type.attack==="aimed"?1700:
+      e.type.attack==="spread"?2200:2500;
+
+    if (e.timer>interval) {
+      e.timer=0;
+      enemyShoot(e,e.type.attack);
+    }
+
+    if (e.y>H+50) {
+      enemies.splice(i,1);
+      continue;
+    }
+
+    if (distance(e.x,e.y,player.x,player.y)<e.radius+player.radius) {
+      damagePlayer(e.type.damage);
+      explode(e.x,e.y,e.type.color,12);
+      enemies.splice(i,1);
+    }
+  }
+}
+
+/* =========================================================
+   BOSS SYSTEM
+========================================================= */
+
+function spawnBoss() {
+  if (state.bossSpawned) return;
+  state.bossSpawned=true;
+
+  const index=(state.sector-1)%BOSS_NAMES.length;
+  const move=BOSS_MOVES[index];
+
+  boss={
+    name:BOSS_NAMES[index],
+    move,
+    x:W/2,
+    y:-100,
+    targetY:115,
+    radius:55,
+    hp:180+state.sector*55,
+    maxHp:180+state.sector*55,
+    speed:1.4+state.sector*.01,
+    timer:0,
+    attackTimer:0,
+    phase:"enter",
+    direction:1
+  };
+
+  $("bossName").textContent=boss.name;
+  $("bossBar").style.display="block";
+  $("bossHealthFill").style.width="100%";
+  playSound("boss");
+  toast("WARNING · "+boss.name);
+}
+
+function bossAttack() {
+  if (!boss) return;
+
+  const dx=player.x-boss.x;
+  const dy=player.y-boss.y;
+  const aim=Math.atan2(dy,dx);
+
+  const shoot=(angle,speed=4)=>{
+    enemyBullets.push({
+      x:boss.x,
+      y:boss.y+20,
+      vx:Math.cos(angle)*speed,
+      vy:Math.sin(angle)*speed,
+      radius:7,
+      damage:18+state.sector*.35,
+      color:"#ff668e"
+    });
+  };
+
+  switch(boss.move) {
+    case "fan":
+      for (let i=-4;i<=4;i++) shoot(Math.PI/2+i*.16,4);
+      break;
+    case "aimed":
+      shoot(aim,6);
+      shoot(aim-.12,5);
+      shoot(aim+.12,5);
+      break;
+    case "spiral":
+      for (let i=0;i<8;i++) shoot(boss.timer*.003+i*Math.PI/4,3.5);
+      break;
+    case "cross":
+      [0,Math.PI/2,Math.PI,Math.PI*1.5].forEach(a=>shoot(a,4));
+      break;
+    case "burst":
+      for (let i=0;i<14;i++) shoot(i*Math.PI/7,3.5);
+      break;
+    case "sweep":
+      for (let i=-3;i<=3;i++) shoot(aim+i*.22,4);
+      break;
+    case "rain":
+      for (let i=0;i<8;i++) {
+        enemyBullets.push({
+          x:Math.random()*W,
+          y:boss.y+20,
+          vx:(Math.random()-.5)*2,
+          vy:4+Math.random()*2,
+          radius:6,
+          damage:16,
+          color:"#ffad72"
+        });
+      }
+      break;
+    case "double":
+      shoot(aim-.25,5);
+      shoot(aim+.25,5);
+      break;
+    case "ring":
+      for (let i=0;i<18;i++) shoot(i*Math.PI/9,3.4);
+      break;
+    case "chaos":
+      for (let i=0;i<12;i++) shoot(Math.random()*Math.PI*2,3+Math.random()*3);
+      break;
+  }
+}
+
+function updateBoss(dt) {
+  if (!boss) return;
+
+  boss.timer+=dt;
+  boss.attackTimer+=dt;
+
+  if (boss.phase==="enter") {
+    boss.y+=(boss.targetY-boss.y)*.025;
+    if (Math.abs(boss.y-boss.targetY)<2) boss.phase="hover";
+  } else {
+    boss.x+=boss.direction*boss.speed*dt*.045;
+
+    if (boss.x>W-85) boss.direction=-1;
+    if (boss.x<85) boss.direction=1;
+
+    boss.y=boss.targetY+Math.sin(boss.timer*.0015)*15;
+
+    if (boss.attackTimer>1250) {
+      boss.attackTimer=0;
+      bossAttack();
+    }
+  }
+
+  $("bossHealthFill").style.width=Math.max(0,boss.hp/boss.maxHp*100)+"%";
+}
+
+/* =========================================================
+   COLLISIONS
+========================================================= */
+
+function distance(x1,y1,x2,y2) {
+  return Math.hypot(x1-x2,y1-y2);
+}
+
+function damagePlayer(amount) {
+  if (player.invulnerable>0) return;
+  player.hp-=amount;
+  player.invulnerable=650;
+  state.screenShake=8;
+  playSound("hit");
+  explode(player.x,player.y,"#ff6b85",8);
+
+  if (player.hp<=0) {
+    player.hp=0;
+    endGame(false);
+  }
+}
+
+function checkCollisions() {
+  for (let i=bullets.length-1;i>=0;i--) {
+    const b=bullets[i];
+    let removed=false;
+
+    for (let j=enemies.length-1;j>=0;j--) {
+      const e=enemies[j];
+      if (distance(b.x,b.y,e.x,e.y)<e.radius+5) {
+        e.hp-=b.damage;
+        bullets.splice(i,1);
+        removed=true;
+        explode(b.x,b.y,e.type.color,3);
+
+        if (e.hp<=0) {
+          destroyEnemy(j);
+        }
+        break;
+      }
+    }
+
+    if (removed) continue;
+
+    if (boss && distance(b.x,b.y,boss.x,boss.y)<boss.radius+8) {
+      boss.hp-=b.damage;
+      bullets.splice(i,1);
+
+      if (boss.hp<=0) {
+        defeatBoss();
+      }
+    }
+  }
+
+  for (let i=enemyBullets.length-1;i>=0;i--) {
+    const b=enemyBullets[i];
+
+    if (distance(b.x,b.y,player.x,player.y)<player.radius+b.radius) {
+      damagePlayer(b.damage);
+      enemyBullets.splice(i,1);
+    }
+  }
+}
+
+function destroyEnemy(index) {
+  const e=enemies[index];
+  explode(e.x,e.y,e.type.color,16);
+  state.kills++;
+  state.credits+=e.type.reward;
+  specialCharge=Math.min(100,specialCharge+5);
+
+  if (Math.random()<.07) {
+    pickups.push({
+      x:e.x,
+      y:e.y,
+      type:"repair",
+      radius:10,
+      speed:2
+    });
+  }
+
+  enemies.splice(index,1);
+  playSound("explosion");
+}
+
+function defeatBoss() {
+  if (!boss) return;
+
+  explode(boss.x,boss.y,"#ff9c6d",75);
+  state.credits+=250+state.sector*15;
+  state.kills+=10;
+  specialCharge=100;
+  boss=null;
+  state.bossDefeated=true;
+  $("bossBar").style.display="none";
+  playSound("explosion");
+  toast("BOSS DEFEATED · REWARDS EARNED");
+
+  setTimeout(()=>{
+    if (state.running && !state.paused) endGame(true);
+  },1100);
+}
+
+/* =========================================================
+   PICKUPS AND SPECIAL ATTACK
+========================================================= */
+
+function updatePickups(dt) {
+  for (let i=pickups.length-1;i>=0;i--) {
+    const p=pickups[i];
+    p.y+=p.speed*dt*.06;
+
+    if (distance(p.x,p.y,player.x,player.y)<player.radius+p.radius) {
+      if (p.type==="repair") {
+        player.hp=Math.min(player.maxHp,player.hp+25);
+        toast("HULL REPAIRED");
+      }
+      pickups.splice(i,1);
+    } else if (p.y>H+20) {
+      pickups.splice(i,1);
+    }
+  }
+}
+
+function useSpecial() {
+  if (!state.running || state.paused || specialCharge<100) {
+    toast("NOVA NOT READY");
+    return;
+  }
+
+  specialCharge=0;
+  playSound("special");
+  state.screenShake=15;
+
+  const radius=Math.max(W,H)*.8;
+
+  explode(player.x,player.y,"#c98bff",55);
+
+  enemies.forEach(e=>{
+    if (distance(player.x,player.y,e.x,e.y)<radius) {
+      e.hp-=player.damage*8;
+    }
+  });
+
+  for (let i=enemies.length-1;i>=0;i--) {
+    if (enemies[i].hp<=0) destroyEnemy(i);
+  }
+
+  enemyBullets=[];
+  if (boss) {
+    boss.hp-=player.damage*12;
+    if (boss.hp<=0) defeatBoss();
+  }
+
+  toast("✦ NOVA BURST");
+}
+
+/* =========================================================
+   UPDATE LOOP
+========================================================= */
+
+function update(dt) {
+  if (!state.running || state.paused) return;
+
+  state.time+=dt;
+  fireTimer-=dt;
+  player.invulnerable=Math.max(0,player.invulnerable-dt);
+
+  const moveSpeed=player.speed*dt*.06;
+
+  if (keys.ArrowLeft || keys.a) player.x-=moveSpeed;
+  if (keys.ArrowRight || keys.d) player.x+=moveSpeed;
+  if (keys.ArrowUp || keys.w) player.y-=moveSpeed;
+  if (keys.ArrowDown || keys.s) player.y+=moveSpeed;
+
+  if (pointerDown) {
+    player.x+=(pointerX-player.x)*.18;
+    player.y+=(pointerY-player.y)*.18;
+  }
+
+  player.x=Math.max(22,Math.min(W-22,player.x));
+  player.y=Math.max(H*.42,Math.min(H-30,player.y));
+
+  playerShoot();
+
+  state.spawnTimer+=dt;
+
+  const spawnInterval=Math.max(380,1300-state.sector*7);
+
+  if (!state.bossSpawned && state.spawnTimer>spawnInterval) {
+    state.spawnTimer=0;
+    spawnEnemy();
+  }
+
+  if (!state.bossSpawned && state.time>22000) {
+    spawnBoss();
+  }
+
+  updateEnemies(dt);
+  updateBoss(dt);
+  updatePickups(dt);
+
+  bullets.forEach(b=>{
+    b.x+=b.vx*dt*.06;
+    b.y+=b.vy*dt*.06;
+  });
+
+  enemyBullets.forEach(b=>{
+    b.x+=b.vx*dt*.06;
+    b.y+=b.vy*dt*.06;
+  });
+
+  bullets=bullets.filter(b=>b.y>-30&&b.y<H+30&&b.x>-30&&b.x<W+30);
+  enemyBullets=enemyBullets.filter(b=>b.y>-30&&b.y<H+30&&b.x>-30&&b.x<W+30);
+
+  particles.forEach(p=>{
+    p.x+=p.vx*dt*.06;
+    p.y+=p.vy*dt*.06;
+    p.life-=dt*.06;
+  });
+  particles=particles.filter(p=>p.life>0);
+
+  checkCollisions();
+
+  state.screenShake=Math.max(0,state.screenShake-dt*.025);
+  updateHUD();
+}
+
+function render(dt) {
+  ctx.save();
+
+  if (state.screenShake>0) {
+    ctx.translate(
+      (Math.random()-.5)*state.screenShake,
+      (Math.random()-.5)*state.screenShake
+    );
+  }
+
+  drawBackground(dt);
+
+  if (state.running) {
+    pickups.forEach(p=>{
+      ctx.fillStyle="#72ffc0";
+      ctx.shadowColor="#72ffc0";
+      ctx.shadowBlur=15;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur=0;
+    });
+
+    enemies.forEach(drawEnemy);
+    drawBoss();
+    drawBullets();
+    drawParticles();
+
+    if (player) {
+      if (player.invulnerable<=0 || Math.floor(state.time/90)%2===0) {
+        drawShip(player.x,player.y,player.color);
+      }
+    }
+  }
+
+  ctx.restore();
+}
+
+function frame(timestamp) {
+  if (!state.running) return;
+
+  const dt=Math.min(timestamp-lastTime,40);
+  lastTime=timestamp;
+
+  if (!state.paused) {
+    update(dt);
+    render(dt);
+  }
+
+  if (state.running) requestAnimationFrame(frame);
+}
+
+/* =========================================================
+   GAME FLOW
+========================================================= */
+
+function endGame(victory) {
+  if (!state.running) return;
+
+  state.running=false;
+  $("hud").classList.remove("active");
+  $("controls").classList.remove("active");
+  $("pauseOverlay").classList.remove("active");
+
+  save.credits+=state.credits;
+  save.kills+=state.kills;
+
+  if (victory) {
+    save.highestSector=Math.max(
+      save.highestSector,
+      Math.min(100,state.sector+1)
+    );
+  }
+
+  saveGame();
+  refreshHome();
+
+  const panel=document.createElement("div");
+  panel.className="screen active center";
+  panel.id="resultScreen";
+
+  panel.innerHTML=`
+    <div class="panel">
+      <h1 style="color:${victory?"#72ffc0":"#ff718d"}">
+        ${victory?"SECTOR CLEARED":"SHIP DESTROYED"}
+      </h1>
+      <p class="muted">MISSION REPORT</p>
+      <div class="stats">
+        <div class="stat"><strong>${state.kills}</strong><small>KILLS</small></div>
+        <div class="stat"><strong>${state.credits}</strong><small>CREDITS</small></div>
+        <div class="stat"><strong>${state.sector}</strong><small>SECTOR</small></div>
+      </div>
+      <div class="menu-buttons">
+        ${victory?'<button class="primary" id="nextSector">NEXT SECTOR</button>':''}
+        <button id="retrySector">RETRY</button>
+        <button id="resultHome">MAIN MENU</button>
+      </div>
+    </div>
+  `;
+
+  $("game").appendChild(panel);
+
+  if (victory) {
+    $("nextSector").addEventListener("click",()=>{
+      panel.remove();
+      startGame(Math.min(100,state.sector+1));
+    });
+  }
+
+  $("retrySector").addEventListener("click",()=>{
+    panel.remove();
+    startGame(state.sector);
+  });
+
+  $("resultHome").addEventListener("click",()=>{
+    panel.remove();
+    showScreen("home");
+  });
+}
+
+function pauseGame() {
+  if (!state.running || state.paused) return;
+  state.paused=true;
+  $("pauseOverlay").classList.add("active");
+}
+
+function resumeGame() {
+  if (!state.running) return;
+  state.paused=false;
+  $("pauseOverlay").classList.remove("active");
+  lastTime=performance.now();
+  requestAnimationFrame(frame);
+}
+
+/* =========================================================
+   INPUT
+========================================================= */
+
+canvas.addEventListener("pointerdown",e=>{
+  if (!state.running || state.paused) return;
+  pointerDown=true;
+  pointerX=e.clientX;
+  pointerY=e.clientY;
+});
+
+canvas.addEventListener("pointermove",e=>{
+  if (!pointerDown) return;
+  pointerX=e.clientX;
+  pointerY=e.clientY;
+});
+
+window.addEventListener("pointerup",()=>pointerDown=false);
+window.addEventListener("pointercancel",()=>pointerDown=false);
+
+window.addEventListener("keydown",e=>{
+  keys[e.key]=true;
+  if (e.key==="Escape") {
+    if (state.paused) resumeGame();
+    else pauseGame();
+  }
+  if (e.key===" " && state.running) useSpecial();
+});
+
+window.addEventListener("keyup",e=>{
+  keys[e.key]=false;
+});
+
+$("specialBtn").addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  useSpecial();
+});
+
+$("playBtn").addEventListener("click",()=>startGame(save.highestSector));
+$("hangarBtn").addEventListener("click",openHangar);
+$("upgradeBtn").addEventListener("click",openUpgrades);
+$("sectorBtn").addEventListener("click",openSectors);
+
+$("soundBtn").addEventListener("click",()=>{
+  save.sound=!save.sound;
+  saveGame();
+  refreshHome();
+});
+
+$("hangarBack").addEventListener("click",()=>{
+  showScreen("home");
+  refreshHome();
+});
+
+$("upgradeBack").addEventListener("click",()=>{
+  showScreen("home");
+  refreshHome();
+});
+
+$("sectorBack").addEventListener("click",()=>{
+  showScreen("home");
+});
+
+$("pauseBtn").addEventListener("click",pauseGame);
+$("resumeBtn").addEventListener("click",resumeGame);
+
+$("restartBtn").addEventListener("click",()=>{
+  $("pauseOverlay").classList.remove("active");
+  startGame(state.sector);
+});
+
+$("quitBtn").addEventListener("click",()=>{
+  state.running=false;
+  $("hud").classList.remove("active");
+  $("controls").classList.remove("active");
+  $("pauseOverlay").classList.remove("active");
+  showScreen("home");
+  refreshHome();
+});
+
+/* =========================================================
+   INITIALIZATION
+========================================================= */
+
+window.addEventListener("resize",()=>{
+  resizeCanvas();
+  makeStars();
+});
+
+window.addEventListener("blur",()=>{
+  if (state.running && !state.paused) pauseGame();
+});
+
+document.addEventListener("visibilitychange",()=>{
+  if (document.hidden && state.running && !state.paused) pauseGame();
+});
+
+refreshHome();
+render(16);
+</script>
+</body>
+</html>
